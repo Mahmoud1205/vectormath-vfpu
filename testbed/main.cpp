@@ -1,6 +1,7 @@
 #include <pspkernel.h>
 #include <pspdebug.h>
 #include <pspdisplay.h>
+#include <psprtc.h>
 #include <pspctrl.h>
 
 #include <gtest/gtest.h>
@@ -8,7 +9,7 @@
 #include <sstream>
 
 PSP_MODULE_INFO("Sony VectorMath VFPU", 0, 1, 0);
-PSP_MAIN_THREAD_ATTR(PSP_THREAD_ATTR_USER);
+PSP_MAIN_THREAD_ATTR(PSP_THREAD_ATTR_USER | PSP_THREAD_ATTR_VFPU);
 
 int exit_callback(int arg1, int arg2, void *common) {
 	sceKernelExitGame();
@@ -72,7 +73,7 @@ public:
 	void OnTestStart(const testing::TestInfo& inTI) override
 	{
 		pspDebugScreenSetTextColor(0xFFFFFF);
-		printf("[ RUN: .... ] %s.%s\n", inTI.test_suite_name(), inTI.name());
+		printf("[ TEST: .... ] %s.%s\n", inTI.test_suite_name(), inTI.name());
 	}
 
 	void OnTestPartResult(const testing::TestPartResult& inRes) override
@@ -81,7 +82,7 @@ public:
 		{
 			pspDebugScreenSetTextColor(0x0000FF);
 			pspDebugScreenCarriageReturn();
-			printf("[ RUN: FAIL ]\n");
+			printf("[ TEST: FAIL ]\n");
 			printf("[  FAILED   ] %s:%d: %s\n",
 				inRes.file_name(),
 				inRes.line_number(),
@@ -95,20 +96,36 @@ public:
 		{
 			pspDebugScreenSetTextColor(0x00FF00);
 			pspDebugScreenCarriageReturn();
-			printf("[ RUN: PASS ]\n", inTI.test_suite_name(), inTI.name());
+			printf("[ TEST: PASS ]\n", inTI.test_suite_name(), inTI.name());
 		}
 	}
 
 	void OnTestProgramEnd(const testing::UnitTest& inUT) override
 	{
+		u32 testColor, perfRatioColor;
 		if (inUT.failed_test_count() == 0)
-			pspDebugScreenSetTextColor(0x00FF00);
+			testColor = 0x00FF00;
 		else
-			pspDebugScreenSetTextColor(0x0000FF);
+			testColor = 0x0000FF;
 
-		printf("\n=== Sony VectorMath VFPU Test [END]: %d/%d tests passed ===\n\n", inUT.successful_test_count(), inUT.test_to_run_count());
+		float scalarVfpuRatio = sScalarTime / sVfpuTime;
+
+		if (scalarVfpuRatio > 1.0f)
+			perfRatioColor = 0x00FF00;
+		else
+			perfRatioColor = 0x0000FF;
+
+		pspDebugScreenSetTextColor(0xFFFFFF);
+		printf("\n=== Sony VectorMath VFPU Test [END] ===\n");
+		pspDebugScreenSetTextColor(testColor);
+		printf("  * %d/%d tests passed.\n", inUT.successful_test_count(), inUT.test_to_run_count());
+		pspDebugScreenSetTextColor(perfRatioColor);
+		printf("  * Scalar:VFPU Performance Ratio: %.3f (%.3fus/%.3fus)\n\n", scalarVfpuRatio, sScalarTime, sVfpuTime);
 		pspDebugScreenSetTextColor(0xFFFFFF);
 	}
+
+	inline static float sScalarTime = 0.0f;
+	inline static float sVfpuTime = 0.0f;
 };
 
 // gtest doesn't link without these stubs
@@ -216,6 +233,148 @@ VMTEST(VectorScalarMultiplication)
 	vB *= 2.0f;
 
 	EXPECT_VEC3_EQ(sB, vB);
+}
+
+VMTEST(VectorVectorDivision)
+{
+	Scalar::Vector3 sA(2.0f, 2.0f, 2.0f);
+	Scalar::Vector3 sB(2.0f, 2.0f, 2.0f);
+	Scalar::Vector3 sC = Scalar::divPerElem(sA, sB);
+
+	VFPU::Vector3 vA(2.0f, 2.0f, 2.0f);
+	VFPU::Vector3 vB(2.0f, 2.0f, 2.0f);
+	VFPU::Vector3 vC = VFPU::divPerElem(vA, vB);
+
+	EXPECT_VEC3_EQ(sC, vC);
+}
+
+VMTEST(VectorScalarDivision)
+{
+	Scalar::Vector3 sV(2.0f, 2.0f, 2.0f);
+	Scalar::Vector3 sA = sV / 2.0f;
+	Scalar::Vector3 sB = sA;
+	sB /= 2.0f;
+
+	VFPU::Vector3 vV(2.0f, 2.0f, 2.0f);
+	VFPU::Vector3 vA = vV / 2.0f;
+	VFPU::Vector3 vB = vA;
+	vB /= 2.0f;
+
+	EXPECT_VEC3_EQ(sB, vB);
+}
+
+VMTEST(VectorNegate)
+{
+	Scalar::Vector3 sA(2.0f, -2.0f, 9.0f);
+	Scalar::Vector3 sB = -sA;
+
+	VFPU::Vector3 vA(2.0f, -2.0f, 9.0f);
+	VFPU::Vector3 vB = -vA;
+
+	EXPECT_VEC3_EQ(sB, vB);
+}
+
+VMTEST(VectorReciprocal)
+{
+	Scalar::Vector3 sA(2.0f, -2.0f, 9.0f);
+	Scalar::Vector3 sB = Scalar::recipPerElem(sA);
+
+	VFPU::Vector3 vA(2.0f, -2.0f, 9.0f);
+	VFPU::Vector3 vB = VFPU::recipPerElem(vA);
+
+	EXPECT_VEC3_EQ(sB, vB);
+}
+
+VMTEST(VectorSqrt)
+{
+	Scalar::Vector3 sA(16.0f, 32.0f, 64.0f);
+	Scalar::Vector3 sB = Scalar::sqrtPerElem(sA);
+
+	VFPU::Vector3 vA(16.0f, 32.0f, 64.0f);
+	VFPU::Vector3 vB = VFPU::sqrtPerElem(vA);
+
+	EXPECT_VEC3_EQ(sB, vB);
+}
+
+VMTEST(VectorReciprocalSqrt)
+{
+	Scalar::Vector3 sA(16.0f, 32.0f, 64.0f);
+	Scalar::Vector3 sB = Scalar::rsqrtPerElem(sA);
+
+	VFPU::Vector3 vA(16.0f, 32.0f, 64.0f);
+	VFPU::Vector3 vB = VFPU::rsqrtPerElem(vA);
+
+	EXPECT_VEC3_EQ(sB, vB);
+}
+
+VMTEST(VectorAbsolute)
+{
+	Scalar::Vector3 sA(2.0f, -2.0f, 9.0f);
+	Scalar::Vector3 sB = Scalar::absPerElem(sA);
+
+	VFPU::Vector3 vA(2.0f, -2.0f, 9.0f);
+	VFPU::Vector3 vB = VFPU::absPerElem(vA);
+
+	EXPECT_VEC3_EQ(sB, vB);
+}
+
+VMTEST(VectorMaxPerElem)
+{
+	Scalar::Vector3 sA(2.0f, -2.0f, 9.0f);
+	Scalar::Vector3 sB(5.0f, -5.0f, 12.0f);
+	Scalar::Vector3 sC = Scalar::maxPerElem(sA, sB);
+
+	VFPU::Vector3 vA(2.0f, -2.0f, 9.0f);
+	VFPU::Vector3 vB(5.0f, -5.0f, 12.0f);
+	VFPU::Vector3 vC = VFPU::maxPerElem(vA, vB);
+
+	EXPECT_VEC3_EQ(sC, vC);
+}
+
+VMTEST(VectorMinPerElem)
+{
+	Scalar::Vector3 sA(2.0f, -2.0f, 9.0f);
+	Scalar::Vector3 sB(5.0f, -5.0f, 12.0f);
+	Scalar::Vector3 sC = Scalar::minPerElem(sA, sB);
+
+	VFPU::Vector3 vA(2.0f, -2.0f, 9.0f);
+	VFPU::Vector3 vB(5.0f, -5.0f, 12.0f);
+	VFPU::Vector3 vC = VFPU::minPerElem(vA, vB);
+
+	EXPECT_VEC3_EQ(sC, vC);
+}
+
+VMTEST(VectorMaxElem)
+{
+	Scalar::Vector3 sA(2.0f, -2.0f, 9.0f);
+	float sB = Scalar::maxElem(sA);
+
+	VFPU::Vector3 vA(2.0f, -2.0f, 9.0f);
+	float vB = VFPU::maxElem(vA);
+
+	EXPECT_FLOAT_EQ(sB, vB);
+}
+
+VMTEST(VectorMinElem)
+{
+	Scalar::Vector3 sA(2.0f, -2.0f, 9.0f);
+	float sB = Scalar::minElem(sA);
+
+	VFPU::Vector3 vA(2.0f, -2.0f, 9.0f);
+	float vB = VFPU::minElem(vA);
+
+	EXPECT_FLOAT_EQ(sB, vB);
+}
+
+VMTEST(VectorSum)
+{
+	Scalar::Vector3 sA(2.0f, -2.0f, 9.0f);
+	float sB = Scalar::sum(sA);
+
+	VFPU::Vector3 vA(2.0f, -2.0f, 9.0f);
+	float vB = VFPU::sum(vA);
+
+	EXPECT_FLOAT_EQ(sB, vB);
 }
 
 VMTEST(VectorDotProduct)
@@ -341,4 +500,90 @@ VMTEST(VectorCrossProduct)
 	EXPECT_VEC3_EQ(sX, vX);
 	EXPECT_VEC3_EQ(sY, vY);
 	EXPECT_VEC3_EQ(sZ, vZ);
+}
+
+VMTEST(Performance)
+{
+	// in microseconds
+	float elapsedScalar, elapsedVFPU;
+
+	{
+		using namespace Scalar;
+		using V3 = Vector3;
+
+		u64 start, end;
+		sceRtcGetCurrentTick(&start);
+
+		V3 add = V3(1.0f, 1.0f, 1.0f) + V3(2.0f, 2.0f, 2.0f);
+		V3 sub = V3(1.0f, 1.0f, 1.0f) - V3(2.0f, 2.0f, 2.0f);
+		V3 mul = mulPerElem(V3(2.0f, 2.0f, 2.0f), V3(2.0f, 2.0f, 2.0f));
+		V3 div = divPerElem(V3(8.0f, 8.0f, 8.0f), V3(2.0f, 2.0f, 2.0f));
+		mul *= 5.0f;
+		mul /= 2.0f;
+
+		V3 _lerp = lerp(0.5f, sub, add);
+		V3 _cross = cross(V3(1.0f, 0.0f, 0.0f), V3(0.0f, 1.0f, 0.0f));
+
+		V3 recip = recipPerElem(V3(5.0f, 5.0f, 5.0f));
+		V3 sqrt = sqrtPerElem(V3(16.0f, 16.0f, 16.0f));
+		V3 rsqrt = rsqrtPerElem(V3(16.0f, 16.0f, 16.0f));
+		V3 abs = absPerElem(V3(-359.0f, -2348.0f, -8573.0f));
+		V3 max = maxPerElem(V3(0.0f, 90.0f, 30.0f), V3(1.0f, 89.0f, 31.0f));
+		V3 min = minPerElem(V3(0.0f, 90.0f, 30.0f), V3(1.0f, 89.0f, 31.0f));
+		V3 normalized = normalize(mul);
+
+		float max2 = maxElem(max);
+		float min2 = minElem(min);
+
+		float _sum = sum(add);
+		float _dot = dot(add, sub);
+		float _lengthSqr = lengthSqr(add);
+		float _length = length(add);
+
+		sceRtcGetCurrentTick(&end);
+		elapsedScalar = (float)(end - start);
+	}
+
+	{
+		using namespace VFPU;
+		using V3 = Vector3;
+
+		u64 start, end;
+		sceRtcGetCurrentTick(&start);
+
+		V3 add = V3(1.0f, 1.0f, 1.0f) + V3(2.0f, 2.0f, 2.0f);
+		V3 sub = V3(1.0f, 1.0f, 1.0f) - V3(2.0f, 2.0f, 2.0f);
+		V3 mul = mulPerElem(V3(2.0f, 2.0f, 2.0f), V3(2.0f, 2.0f, 2.0f));
+		V3 div = divPerElem(V3(8.0f, 8.0f, 8.0f), V3(2.0f, 2.0f, 2.0f));
+		mul *= 5.0f;
+		mul /= 2.0f;
+
+		V3 _lerp = lerp(0.5f, sub, add);
+		V3 _cross = cross(V3(1.0f, 0.0f, 0.0f), V3(0.0f, 1.0f, 0.0f));
+
+		V3 recip = recipPerElem(V3(5.0f, 5.0f, 5.0f));
+		V3 sqrt = sqrtPerElem(V3(16.0f, 16.0f, 16.0f));
+		V3 rsqrt = rsqrtPerElem(V3(16.0f, 16.0f, 16.0f));
+		V3 abs = absPerElem(V3(-359.0f, -2348.0f, -8573.0f));
+		V3 max = maxPerElem(V3(0.0f, 90.0f, 30.0f), V3(1.0f, 89.0f, 31.0f));
+		V3 min = minPerElem(V3(0.0f, 90.0f, 30.0f), V3(1.0f, 89.0f, 31.0f));
+		V3 normalized = normalize(mul);
+
+		float max2 = maxElem(max);
+		float min2 = minElem(min);
+
+		float _sum = sum(add);
+		float _dot = dot(add, sub);
+		float _lengthSqr = lengthSqr(add);
+		float _length = length(add);
+
+		sceRtcGetCurrentTick(&end);
+		elapsedVFPU = (float)(end - start);
+	}
+
+	PspTestListener::sScalarTime = elapsedScalar;
+	PspTestListener::sVfpuTime = elapsedVFPU;
+
+	float ratio = elapsedScalar / elapsedVFPU;
+	EXPECT_GT(ratio, 1.0f);
 }

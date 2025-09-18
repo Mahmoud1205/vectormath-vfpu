@@ -204,7 +204,6 @@ inline const Point3 Vector3::operator + (const Point3 & pnt) const
 inline const Vector3 Vector3::operator * (float scalar) const
 {
 	Vector3 res;
-	asm volatile("break");
 	vfpuScale4(&mX, &res.mX, scalar);
 	return res;
 }

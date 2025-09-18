@@ -5,7 +5,7 @@
 VFPU version of [glampert's modification of Sony's open-sourced header-only vector and matrix math library](https://github.com/glampert/vectormath).
 * This modification replaces the SSE implementation with a VFPU implementation for the PlayStation Portable.
 * The Scalar implementation is kept for reference and debugging.
-* This modification is no longer header-only; it contains an assembly file which must be compiled using `psp-as` from the open-source `pspsdk`.
+* This modification is no longer header-only; it contains an assembly file which must be compiled using `psp-gcc` from the open-source `pspsdk`.
 * The user can switch between VFPU and Scalar mode by defining `VECTORMATH_MODE_VFPU` or `VECTORMATH_MODE_SCALAR` respectively before including `vectormath.hpp` or in the compiler option. If none are defined: the library defaults to `VECTORMATH_MODE_VFPU`.
 * This modification includes a testbed application to run unit testing (GoogleTest) to verify the output of the VFPU implementation against the Scalar implementation on Emulator PSP or real PSP.
 
