@@ -8,7 +8,7 @@
 #include <iostream>
 #include <sstream>
 
-PSP_MODULE_INFO("Sony VectorMath VFPU", 0, 1, 0);
+PSP_MODULE_INFO("VectorMath VFPU", 0, 1, 0);
 PSP_MAIN_THREAD_ATTR(PSP_THREAD_ATTR_USER | PSP_THREAD_ATTR_VFPU);
 
 int exit_callback(int arg1, int arg2, void *common) {
@@ -65,7 +65,7 @@ class PspTestListener : public testing::EmptyTestEventListener
 public:
 	void OnTestProgramStart(const testing::UnitTest& inUT) override
 	{
-		puts("====== Sony VectorMath VFPU Test ======");
+		puts("====== VectorMath VFPU Test ======");
 		puts("Press any button to start testing..\n");
 		waitForBtn();
 	};
@@ -116,7 +116,7 @@ public:
 			perfRatioColor = 0x0000FF;
 
 		pspDebugScreenSetTextColor(0xFFFFFF);
-		printf("\n=== Sony VectorMath VFPU Test [END] ===\n");
+		printf("\n=== VectorMath VFPU Test [END] ===\n");
 		pspDebugScreenSetTextColor(testColor);
 		printf("  * %d/%d tests passed.\n", inUT.successful_test_count(), inUT.test_to_run_count());
 		pspDebugScreenSetTextColor(perfRatioColor);

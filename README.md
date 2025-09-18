@@ -3,6 +3,7 @@
 
 ## VFPU Modification
 VFPU version of [glampert's modification of Sony's open-sourced header-only vector and matrix math library](https://github.com/glampert/vectormath).
+* **THIS PORT IS NOT COMPLETE YET !!**
 * This modification replaces the SSE implementation with a VFPU implementation for the PlayStation Portable.
 * The Scalar implementation is kept for reference and debugging.
 * This modification is no longer header-only; it contains an assembly file which must be compiled using `psp-gcc` from the open-source `pspsdk`.
