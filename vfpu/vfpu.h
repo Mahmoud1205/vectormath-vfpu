@@ -31,4 +31,5 @@ extern "C"
 	extern float	vfpuNormalize4(const float inVec[4], float ioVec[4]);
 
 	extern void		vfpuLerp4(const float inVecA[4], const float inVecB[4], float ioVec[4], float inT);
+	extern float	vfpuProjection4(const float inPnt[4], const float inUnitVec[4]);
 }

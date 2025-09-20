@@ -10,6 +10,12 @@ VFPU version of [glampert's modification of Sony's open-sourced header-only vect
 * The user can switch between VFPU and Scalar mode by defining `VECTORMATH_MODE_VFPU` or `VECTORMATH_MODE_SCALAR` respectively before including `vectormath.hpp` or in the compiler option. If none are defined: the library defaults to `VECTORMATH_MODE_VFPU`.
 * This modification includes a testbed application to run unit testing (GoogleTest) to verify the output of the VFPU implementation against the Scalar implementation on Emulator PSP or real PSP.
 
+## Breaking Changes
+* The original library preserved the W component of 3D Vectors. This is no longer preserved. The W component of 3D Vectors is undefined after many operations. DO NOT rely on it!!
+
+## Non-Breaking Changes
+* All member variables are public now.
+
 ## Building Steps (Linux)
 The releases tab contains a precompiled version of the library. But if you wish to compile it yourself,
 1. Ensure you have the open-source `pspsdk` installed and in the system `PATH`.

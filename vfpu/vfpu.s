@@ -18,7 +18,8 @@ vfpuCopy4v:
 	.ent		vfpuReplicate4
 	.global		vfpuReplicate4
 vfpuReplicate4:
-	# TODO: maybe vmov.s is faster than mtv
+	# TODO: maybe vmov.s is faster than mtv. profile this
+	# or vmov.q with swizzle .xxxx prefix
 	mfc1		$t0, $f12
 	mtv			$t0, S000
 	mtv			$t0, S001
@@ -244,8 +245,7 @@ vfpuDot4:
 	.global		vfpuLengthSqr4
 vfpuLengthSqr4:
 	lv.q		C000, 0($a0)
-	vmul.q		C000, C000, C000
-	vfad.q		S000, C000
+	vdot.q		S000, C000, C000
 	mfv			$t0, S000
 	mtc1		$t0, $f0
 	jr			$ra
@@ -258,8 +258,7 @@ vfpuLengthSqr4:
 	.global		vfpuLength4
 vfpuLength4:
 	lv.q		C000, 0($a0)
-	vmul.q		C000, C000, C000
-	vfad.q		S000, C000
+	vdot.q		S000, C000, C000
 	vsqrt.s		S000, S000
 	mfv			$t0, S000
 	mtc1		$t0, $f0
@@ -274,8 +273,7 @@ vfpuLength4:
 vfpuNormalize4:
 	lv.q		C000, 0($a0)
 	vmov.q		C010, C000
-	vmul.q		C000, C000, C000
-	vfad.q		S000, C000
+	vdot.q		S000, C000, C000
 	vrsq.s		S000, S000
 	vscl.q		C010, C010, S000
 	sv.q		C010, 0($a1)
@@ -313,3 +311,17 @@ vfpuCross3:
 	jr			$ra
 	nop
 	.end		vfpuCross3
+
+
+	# float vfpuProjection4(const float inPnt[4], const float inUnitVec[4]);
+	.ent		vfpuProjection4
+	.global		vfpuProjection4
+vfpuProjection4:
+	lv.q		C000, 0($a0)
+	lv.q		C010, 0($a1)
+	vdot.q		S000, C000, C010
+	mfv			$t0, S000
+	mtc1		$t0, $f0
+	jr			$ra
+	nop
+	.end		vfpuProjection4

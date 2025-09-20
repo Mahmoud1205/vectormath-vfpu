@@ -8,6 +8,8 @@
 #include <iostream>
 #include <sstream>
 
+// TODO: scrolling the screen
+
 PSP_MODULE_INFO("VectorMath VFPU", 0, 1, 0);
 PSP_MAIN_THREAD_ATTR(PSP_THREAD_ATTR_USER | PSP_THREAD_ATTR_VFPU);
 
@@ -181,15 +183,37 @@ using namespace Vectormath;
  * ======================================================================
  */
 
+#define PRINTV3(inVec) fprintf(stdout, "vec3(%.3f, %.3f, %.3f)\n", inVec.getX(), inVec.getY(), inVec.getZ())
+
+// TODO: FIX THIS
+// VMTEST(VectorConstructor)
+// {
+// 	Scalar::Vector3 sA(5.0f);
+// 	Scalar::Vector3 sB(2.0f, 2.0f, 2.0f);
+// 	Scalar::Vector3 sC = sB;
+
+// 	VFPU::Vector3 vA(5.0f);
+// 	VFPU::Vector3 vB(2.0f, 2.0f, 2.0f);
+// 	VFPU::Vector3 vC = vB;
+
+// 	EXPECT_VEC3_EQ(sA, vA);
+// 	EXPECT_VEC3_EQ(sB, vB);
+// 	EXPECT_VEC3_EQ(sC, vC);
+// }
+
+// TODO: unit tests for Vector4 and Point3
+
 VMTEST(VectorAddition)
 {
 	Scalar::Vector3 sA(1.0f, 1.0f, 1.0f);
 	Scalar::Vector3 sB(1.0f, 1.0f, 1.0f);
 	Scalar::Vector3 sC = sA + sB;
+	sC += Scalar::Vector3(2.0f);
 
 	VFPU::Vector3 vA(1.0f, 1.0f, 1.0f);
 	VFPU::Vector3 vB(1.0f, 1.0f, 1.0f);
 	VFPU::Vector3 vC = vA + vB;
+	vC += VFPU::Vector3(2.0f);
 
 	EXPECT_VEC3_EQ(sC, vC);
 }
@@ -199,10 +223,12 @@ VMTEST(VectorSubtraction)
 	Scalar::Vector3 sA(2.0f, 2.0f, 2.0f);
 	Scalar::Vector3 sB(1.0f, 1.0f, 1.0f);
 	Scalar::Vector3 sC = sA - sB;
+	sC -= Scalar::Vector3(2.0f);
 
 	VFPU::Vector3 vA(2.0f, 2.0f, 2.0f);
 	VFPU::Vector3 vB(1.0f, 1.0f, 1.0f);
 	VFPU::Vector3 vC = vA - vB;
+	vC -= VFPU::Vector3(2.0f);
 
 	EXPECT_VEC3_EQ(sC, vC);
 }
@@ -500,6 +526,32 @@ VMTEST(VectorCrossProduct)
 	EXPECT_VEC3_EQ(sX, vX);
 	EXPECT_VEC3_EQ(sY, vY);
 	EXPECT_VEC3_EQ(sZ, vZ);
+}
+
+VMTEST(PointProjection)
+{
+	Scalar::Point3 sP(5.0f, 50.0f, 123.0f);
+	Scalar::Vector3 sV(0.25f, 0.5f, 0.25f);
+	float sR = Scalar::projection(sP, sV);
+
+	VFPU::Point3 vP(5.0f, 50.0f, 123.0f);
+	VFPU::Vector3 vV(0.25f, 0.5f, 0.25f);
+	float vR = VFPU::projection(vP, vV);
+
+	EXPECT_FLOAT_EQ(sR, vR);
+}
+
+VMTEST(PointScale)
+{
+	Scalar::Point3 sA(5.0f, 50.0f, 123.0f);
+	Scalar::Point3 sB = Scalar::scale(sA, 2.0f);
+	Scalar::Point3 sC = Scalar::scale(sA, Scalar::Vector3(3.0f, 2.0f, 1.0f));
+
+	VFPU::Point3 vA(5.0f, 50.0f, 123.0f);
+	VFPU::Point3 vB = VFPU::scale(vA, 2.0f);
+	VFPU::Point3 vC = VFPU::scale(vA, VFPU::Vector3(3.0f, 2.0f, 1.0f));
+
+	EXPECT_VEC3_EQ(sC, vC);
 }
 
 VMTEST(Performance)

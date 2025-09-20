@@ -833,7 +833,8 @@ inline void print(const Point3 & pnt, const char * name);
 
 VECTORMATH_ALIGNED_TYPE_PRE class Quat
 {
-public:// Default constructor; does no initializationinline Quat() { }
+public:// Default constructor; does no initialization
+	inline Quat() {}
 	float mX;
     float mY;
     float mZ;
@@ -1070,11 +1071,10 @@ inline void print(const Quat & quat, const char * name);
 
 VECTORMATH_ALIGNED_TYPE_PRE class Matrix3
 {
-    Vector3 mCol0;
+public:
+	Vector3 mCol0;
     Vector3 mCol1;
     Vector3 mCol2;
-
-public:
 
     // Default constructor; does no initialization
     //
@@ -1294,14 +1294,13 @@ inline void print(const Matrix3 & mat, const char * name);
 
 VECTORMATH_ALIGNED_TYPE_PRE class Matrix4
 {
-    Vector4 mCol0;
+public:
+	Vector4 mCol0;
     Vector4 mCol1;
     Vector4 mCol2;
     Vector4 mCol3;
 
-public:
-
-    // Default constructor; does no initialization
+	// Default constructor; does no initialization
     //
     inline Matrix4() { }
 
@@ -1603,14 +1602,13 @@ inline void print(const Matrix4 & mat, const char * name);
 
 VECTORMATH_ALIGNED_TYPE_PRE class Transform3
 {
-    Vector3 mCol0;
+public:
+	Vector3 mCol0;
     Vector3 mCol1;
     Vector3 mCol2;
     Vector3 mCol3;
 
-public:
-
-    // Default constructor; does no initialization
+	// Default constructor; does no initialization
     //
     inline Transform3() { }
 

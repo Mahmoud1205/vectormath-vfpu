@@ -387,10 +387,7 @@ inline void print(const Vector3 & vec, const char * name)
 
 inline Vector4::Vector4(const Vector4 & vec)
 {
-	mX = vec.mX;
-	mY = vec.mY;
-	mZ = vec.mZ;
-	mW = vec.mW;
+	vfpuCopy4v(&vec.mX, &mX);
 }
 
 inline Vector4::Vector4(float _x, float _y, float _z, float _w)
@@ -403,40 +400,30 @@ inline Vector4::Vector4(float _x, float _y, float _z, float _w)
 
 inline Vector4::Vector4(const Vector3 & xyz, float _w)
 {
-	this->setXYZ(xyz);
-	this->setW(_w);
+	vfpuCopy4v(&xyz.mX, &mX);
+	mW = _w;
 }
 
 inline Vector4::Vector4(const Vector3 & vec)
 {
-	mX = vec.getX();
-	mY = vec.getY();
-	mZ = vec.getZ();
+	vfpuCopy4v(&vec.mX, &mX);
 	mW = 0.0f;
 }
 
 inline Vector4::Vector4(const Point3 & pnt)
 {
-	mX = pnt.getX();
-	mY = pnt.getY();
-	mZ = pnt.getZ();
+	vfpuCopy4v(&pnt.mX, &mX);
 	mW = 1.0f;
 }
 
 inline Vector4::Vector4(const Quat & quat)
 {
-	mX = quat.getX();
-	mY = quat.getY();
-	mZ = quat.getZ();
-	mW = quat.getW();
+	vfpuCopy4v(&quat.mX, &mX);
 }
 
 inline Vector4::Vector4(float scalar)
 {
-	mX = scalar;
-	mY = scalar;
-	mZ = scalar;
-	mW = scalar;
+	vfpuReplicate4(scalar, &mX);
 }
 
 inline const Vector4 Vector4::xAxis()
@@ -461,11 +448,14 @@ inline const Vector4 Vector4::wAxis()
 
 inline const Vector4 lerp(float t, const Vector4 & vec0, const Vector4 & vec1)
 {
-	return (vec0 + ((vec1 - vec0) * t));
+	Vector4 res;
+	vfpuLerp4(&vec0.mX, &vec1.mX, &res.mX, t);
+	return res;
 }
 
 inline const Vector4 slerp(float t, const Vector4 & unitVec0, const Vector4 & unitVec1)
 {
+	// TODO: implement vfpu
 	float recipSinAngle, scale0, scale1, cosAngle, angle;
 	cosAngle = dot(unitVec0, unitVec1);
 	if (cosAngle < VECTORMATH_SLERP_TOL)
@@ -485,18 +475,15 @@ inline const Vector4 slerp(float t, const Vector4 & unitVec0, const Vector4 & un
 
 inline Vector4 & Vector4::operator = (const Vector4 & vec)
 {
-	mX = vec.mX;
-	mY = vec.mY;
-	mZ = vec.mZ;
-	mW = vec.mW;
+	vfpuCopy4v(&vec.mX, &mX);
 	return *this;
 }
 
 inline Vector4 & Vector4::setXYZ(const Vector3 & vec)
 {
-	mX = vec.getX();
-	mY = vec.getY();
-	mZ = vec.getZ();
+	float savedW = mW;
+	vfpuCopy4v(&vec.mX, &mX);
+	mW = savedW;
 	return *this;
 }
 
@@ -572,63 +559,61 @@ inline float Vector4::operator[](int idx) const
 
 inline const Vector4 Vector4::operator + (const Vector4 & vec) const
 {
-	return Vector4((mX + vec.mX),
-				   (mY + vec.mY),
-				   (mZ + vec.mZ),
-				   (mW + vec.mW));
+	Vector4 res;
+	vfpuAdd4(&mX, &vec.mX, &res.mX);
+	return res;
 }
 
 inline const Vector4 Vector4::operator - (const Vector4 & vec) const
 {
-	return Vector4((mX - vec.mX),
-				   (mY - vec.mY),
-				   (mZ - vec.mZ),
-				   (mW - vec.mW));
+	Vector4 res;
+	vfpuSub4(&mX, &vec.mX, &res.mX);
+	return res;
 }
 
 inline const Vector4 Vector4::operator * (float scalar) const
 {
-	return Vector4((mX * scalar),
-				   (mY * scalar),
-				   (mZ * scalar),
-				   (mW * scalar));
+	Vector4 res;
+	vfpuScale4(&mX, &res.mX, scalar);
+	return res;
 }
 
 inline Vector4 & Vector4::operator += (const Vector4 & vec)
 {
-	*this = *this + vec;
+	vfpuAdd4(&mX, &vec.mX, &mX);
 	return *this;
 }
 
 inline Vector4 & Vector4::operator -= (const Vector4 & vec)
 {
-	*this = *this - vec;
+	vfpuSub4(&mX, &vec.mX, &mX);
 	return *this;
 }
 
 inline Vector4 & Vector4::operator *= (float scalar)
 {
-	*this = *this * scalar;
+	vfpuScale4(&mX, &mX, scalar);
 	return *this;
 }
 
 inline const Vector4 Vector4::operator / (float scalar) const
 {
-	return Vector4((mX / scalar),
-				   (mY / scalar),
-				   (mZ / scalar),
-				   (mW / scalar));
+	Vector4 res;
+	vfpuScale4(&mX, &res.mX, 1.0f / scalar);
+	return res;
 }
 
 inline Vector4 & Vector4::operator /= (float scalar)
 {
-	*this = *this / scalar;
+	vfpuScale4(&mX, &mX, 1.0f / scalar);
 	return *this;
 }
 
 inline const Vector4 Vector4::operator - () const
 {
-	return Vector4(-mX, -mY, -mZ, -mW);
+	Vector4 res;
+	vfpuNeg4(&mX, &res.mX);
+	return res;
 }
 
 inline const Vector4 operator * (float scalar, const Vector4 & vec)
@@ -638,54 +623,49 @@ inline const Vector4 operator * (float scalar, const Vector4 & vec)
 
 inline const Vector4 mulPerElem(const Vector4 & vec0, const Vector4 & vec1)
 {
-	return Vector4((vec0.getX() * vec1.getX()),
-				   (vec0.getY() * vec1.getY()),
-				   (vec0.getZ() * vec1.getZ()),
-				   (vec0.getW() * vec1.getW()));
+	Vector4 res;
+	vfpuMul4(&vec0.mX, &vec1.mX, &res.mX);
+	return res;
 }
 
 inline const Vector4 divPerElem(const Vector4 & vec0, const Vector4 & vec1)
 {
-	return Vector4((vec0.getX() / vec1.getX()),
-				   (vec0.getY() / vec1.getY()),
-				   (vec0.getZ() / vec1.getZ()),
-				   (vec0.getW() / vec1.getW()));
+	Vector4 res;
+	vfpuDiv4(&vec0.mX, &vec1.mX, &res.mX);
+	return res;
 }
 
 inline const Vector4 recipPerElem(const Vector4 & vec)
 {
-	return Vector4((1.0f / vec.getX()),
-				   (1.0f / vec.getY()),
-				   (1.0f / vec.getZ()),
-				   (1.0f / vec.getW()));
+	Vector4 res;
+	vfpuReciprocal4(&vec.mX, &res.mX);
+	return res;
 }
 
 inline const Vector4 sqrtPerElem(const Vector4 & vec)
 {
-	return Vector4(std::sqrtf(vec.getX()),
-				   std::sqrtf(vec.getY()),
-				   std::sqrtf(vec.getZ()),
-				   std::sqrtf(vec.getW()));
+	Vector4 res;
+	vfpuSqrt4(&vec.mX, &res.mX);
+	return res;
 }
 
 inline const Vector4 rsqrtPerElem(const Vector4 & vec)
 {
-	return Vector4((1.0f / std::sqrtf(vec.getX())),
-				   (1.0f / std::sqrtf(vec.getY())),
-				   (1.0f / std::sqrtf(vec.getZ())),
-				   (1.0f / std::sqrtf(vec.getW())));
+	Vector4 res;
+	vfpuReciprocalSqrt4(&vec.mX, &res.mX);
+	return res;
 }
 
 inline const Vector4 absPerElem(const Vector4 & vec)
 {
-	return Vector4(std::fabsf(vec.getX()),
-				   std::fabsf(vec.getY()),
-				   std::fabsf(vec.getZ()),
-				   std::fabsf(vec.getW()));
+	Vector4 res;
+	vfpuAbs4(&vec.mX, &res.mX);
+	return res;
 }
 
 inline const Vector4 copySignPerElem(const Vector4 & vec0, const Vector4 & vec1)
 {
+	// TODO: implement vfpu
 	return Vector4((vec1.getX() < 0.0f) ? -std::fabsf(vec0.getX()) : std::fabsf(vec0.getX()),
 				   (vec1.getY() < 0.0f) ? -std::fabsf(vec0.getY()) : std::fabsf(vec0.getY()),
 				   (vec1.getZ() < 0.0f) ? -std::fabsf(vec0.getZ()) : std::fabsf(vec0.getZ()),
@@ -694,89 +674,58 @@ inline const Vector4 copySignPerElem(const Vector4 & vec0, const Vector4 & vec1)
 
 inline const Vector4 maxPerElem(const Vector4 & vec0, const Vector4 & vec1)
 {
-	return Vector4((vec0.getX() > vec1.getX()) ? vec0.getX() : vec1.getX(),
-				   (vec0.getY() > vec1.getY()) ? vec0.getY() : vec1.getY(),
-				   (vec0.getZ() > vec1.getZ()) ? vec0.getZ() : vec1.getZ(),
-				   (vec0.getW() > vec1.getW()) ? vec0.getW() : vec1.getW());
+	Vector4 res;
+	vfpuMax4v(&vec0.mX, &vec1.mX, &res.mX);
+	return res;
 }
 
 inline float maxElem(const Vector4 & vec)
 {
-	float result;
-	result = (vec.getX() > vec.getY()) ? vec.getX() : vec.getY();
-	result = (vec.getZ() > result)     ? vec.getZ() : result;
-	result = (vec.getW() > result)     ? vec.getW() : result;
-	return result;
+	return vfpuMax4f(&vec.mX);
 }
 
 inline const Vector4 minPerElem(const Vector4 & vec0, const Vector4 & vec1)
 {
-	return Vector4((vec0.getX() < vec1.getX()) ? vec0.getX() : vec1.getX(),
-				   (vec0.getY() < vec1.getY()) ? vec0.getY() : vec1.getY(),
-				   (vec0.getZ() < vec1.getZ()) ? vec0.getZ() : vec1.getZ(),
-				   (vec0.getW() < vec1.getW()) ? vec0.getW() : vec1.getW());
+	Vector4 res;
+	vfpuMin4v(&vec0.mX, &vec1.mX, &res.mX);
+	return res;
 }
 
 inline float minElem(const Vector4 & vec)
 {
-	float result;
-	result = (vec.getX() < vec.getY()) ? vec.getX() : vec.getY();
-	result = (vec.getZ() < result)     ? vec.getZ() : result;
-	result = (vec.getW() < result)     ? vec.getW() : result;
-	return result;
+	return vfpuMin4f(&vec.mX);
 }
 
 inline float sum(const Vector4 & vec)
 {
-	float result;
-	result = (vec.getX() + vec.getY());
-	result = (result + vec.getZ());
-	result = (result + vec.getW());
-	return result;
+	return vfpuSum4(&vec.mX);
 }
 
 inline float dot(const Vector4 & vec0, const Vector4 & vec1)
 {
-	float result;
-	result = (vec0.getX() * vec1.getX());
-	result = (result + (vec0.getY() * vec1.getY()));
-	result = (result + (vec0.getZ() * vec1.getZ()));
-	result = (result + (vec0.getW() * vec1.getW()));
-	return result;
+	return vfpuDot4(&vec0.mX, &vec1.mX);
 }
 
 inline float lengthSqr(const Vector4 & vec)
 {
-	float result;
-	result = (vec.getX() * vec.getX());
-	result = (result + (vec.getY() * vec.getY()));
-	result = (result + (vec.getZ() * vec.getZ()));
-	result = (result + (vec.getW() * vec.getW()));
-	return result;
+	return vfpuLengthSqr4(&vec.mX);
 }
 
 inline float length(const Vector4 & vec)
 {
-	return std::sqrtf(lengthSqr(vec));
+	return vfpuLength4(&vec.mX);
 }
 
 inline const Vector4 normalize(const Vector4 & vec)
 {
-	float lenSqr, lenInv;
-	lenSqr = lengthSqr(vec);
-	lenInv = (1.0f / std::sqrtf(lenSqr));
-	return Vector4((vec.getX() * lenInv),
-				   (vec.getY() * lenInv),
-				   (vec.getZ() * lenInv),
-				   (vec.getW() * lenInv));
+	Vector4 res;
+	vfpuNormalize4(&vec.mX, &res.mX);
+	return res;
 }
 
 inline const Vector4 select(const Vector4 & vec0, const Vector4 & vec1, bool select1)
 {
-	return Vector4((select1) ? vec1.getX() : vec0.getX(),
-				   (select1) ? vec1.getY() : vec0.getY(),
-				   (select1) ? vec1.getZ() : vec0.getZ(),
-				   (select1) ? vec1.getW() : vec0.getW());
+	return select1 ? vec1 : vec0;
 }
 
 #ifdef VECTORMATH_DEBUG
@@ -799,9 +748,7 @@ inline void print(const Vector4 & vec, const char * name)
 
 inline Point3::Point3(const Point3 & pnt)
 {
-	mX = pnt.mX;
-	mY = pnt.mY;
-	mZ = pnt.mZ;
+	vfpuCopy4v(&pnt.mX, &mX);
 }
 
 inline Point3::Point3(float _x, float _y, float _z)
@@ -813,28 +760,24 @@ inline Point3::Point3(float _x, float _y, float _z)
 
 inline Point3::Point3(const Vector3 & vec)
 {
-	mX = vec.getX();
-	mY = vec.getY();
-	mZ = vec.getZ();
+	vfpuCopy4v(&vec.mX, &mX);
 }
 
 inline Point3::Point3(float scalar)
 {
-	mX = scalar;
-	mY = scalar;
-	mZ = scalar;
+	vfpuReplicate4(scalar, &mX);
 }
 
 inline const Point3 lerp(float t, const Point3 & pnt0, const Point3 & pnt1)
 {
-	return (pnt0 + ((pnt1 - pnt0) * t));
+	Point3 res;
+	vfpuLerp4(&pnt0.mX, &pnt1.mX, &res.mX, t);
+	return res;
 }
 
 inline Point3 & Point3::operator = (const Point3 & pnt)
 {
-	mX = pnt.mX;
-	mY = pnt.mY;
-	mZ = pnt.mZ;
+	vfpuCopy4v(&pnt.mX, &mX);
 	return *this;
 }
 
@@ -905,162 +848,160 @@ inline float Point3::operator[](int idx) const
 
 inline const Vector3 Point3::operator - (const Point3 & pnt) const
 {
-	return Vector3((mX - pnt.mX), (mY - pnt.mY), (mZ - pnt.mZ));
+	Vector3 res;
+	vfpuSub4(&mX, &pnt.mX, &res.mX);
+	return res;
 }
 
 inline const Point3 Point3::operator + (const Vector3 & vec) const
 {
-	return Point3((mX + vec.getX()), (mY + vec.getY()), (mZ + vec.getZ()));
+	Point3 res;
+	vfpuAdd4(&mX, &vec.mX, &res.mX);
+	return res;
 }
 
 inline const Point3 Point3::operator - (const Vector3 & vec) const
 {
-	return Point3((mX - vec.getX()), (mY - vec.getY()), (mZ - vec.getZ()));
+	Point3 res;
+	vfpuSub4(&mX, &vec.mX, &res.mX);
+	return res;
 }
 
 inline Point3 & Point3::operator += (const Vector3 & vec)
 {
-	*this = *this + vec;
+	vfpuAdd4(&mX, &vec.mX, &mX);
 	return *this;
 }
 
 inline Point3 & Point3::operator -= (const Vector3 & vec)
 {
-	*this = *this - vec;
+	vfpuSub4(&mX, &vec.mX, &mX);
 	return *this;
 }
 
 inline const Point3 mulPerElem(const Point3 & pnt0, const Point3 & pnt1)
 {
-	return Point3((pnt0.getX() * pnt1.getX()),
-				  (pnt0.getY() * pnt1.getY()),
-				  (pnt0.getZ() * pnt1.getZ()));
+	Point3 res;
+	vfpuMul4(&pnt0.mX, &pnt1.mX, &res.mX);
+	return res;
 }
 
 inline const Point3 divPerElem(const Point3 & pnt0, const Point3 & pnt1)
 {
-	return Point3((pnt0.getX() / pnt1.getX()),
-				  (pnt0.getY() / pnt1.getY()),
-				  (pnt0.getZ() / pnt1.getZ()));
+	Point3 res;
+	vfpuDiv4(&pnt0.mX, &pnt1.mX, &res.mX);
+	return res;
 }
 
 inline const Point3 recipPerElem(const Point3 & pnt)
 {
-	return Point3((1.0f / pnt.getX()),
-				  (1.0f / pnt.getY()),
-				  (1.0f / pnt.getZ()));
+	Point3 res;
+	vfpuReciprocal4(&pnt.mX, &res.mX);
+	return res;
 }
 
 inline const Point3 sqrtPerElem(const Point3 & pnt)
 {
-	return Point3(std::sqrtf(pnt.getX()),
-				  std::sqrtf(pnt.getY()),
-				  std::sqrtf(pnt.getZ()));
+	Point3 res;
+	vfpuSqrt4(&pnt.mX, &res.mX);
+	return res;
 }
 
 inline const Point3 rsqrtPerElem(const Point3 & pnt)
 {
-	return Point3((1.0f / std::sqrtf(pnt.getX())),
-				  (1.0f / std::sqrtf(pnt.getY())),
-				  (1.0f / std::sqrtf(pnt.getZ())));
+	Point3 res;
+	vfpuReciprocalSqrt4(&pnt.mX, &res.mX);
+	return res;
 }
 
 inline const Point3 absPerElem(const Point3 & pnt)
 {
-	return Point3(std::fabsf(pnt.getX()),
-				  std::fabsf(pnt.getY()),
-				  std::fabsf(pnt.getZ()));
+	Point3 res;
+	vfpuAbs4(&pnt.mX, &res.mX);
+	return res;
 }
 
 inline const Point3 copySignPerElem(const Point3 & pnt0, const Point3 & pnt1)
 {
+	// TODO: implement in vfpu
 	return Point3((pnt1.getX() < 0.0f) ? -std::fabsf(pnt0.getX()) : std::fabsf(pnt0.getX()),
-				  (pnt1.getY() < 0.0f) ? -std::fabsf(pnt0.getY()) : std::fabsf(pnt0.getY()),
-				  (pnt1.getZ() < 0.0f) ? -std::fabsf(pnt0.getZ()) : std::fabsf(pnt0.getZ()));
+				   (pnt1.getY() < 0.0f) ? -std::fabsf(pnt0.getY()) : std::fabsf(pnt0.getY()),
+				   (pnt1.getZ() < 0.0f) ? -std::fabsf(pnt0.getZ()) : std::fabsf(pnt0.getZ()));
 }
 
 inline const Point3 maxPerElem(const Point3 & pnt0, const Point3 & pnt1)
 {
-	return Point3((pnt0.getX() > pnt1.getX()) ? pnt0.getX() : pnt1.getX(),
-				  (pnt0.getY() > pnt1.getY()) ? pnt0.getY() : pnt1.getY(),
-				  (pnt0.getZ() > pnt1.getZ()) ? pnt0.getZ() : pnt1.getZ());
+	Point3 res;
+	vfpuMax4v(&pnt0.mX, &pnt1.mX, &res.mX);
+	return res;
 }
 
 inline float maxElem(const Point3 & pnt)
 {
-	float result;
-	result = (pnt.getX() > pnt.getY()) ? pnt.getX() : pnt.getY();
-	result = (pnt.getZ() > result)     ? pnt.getZ() : result;
-	return result;
+	return vfpuMax4f(&pnt.mX);
 }
 
 inline const Point3 minPerElem(const Point3 & pnt0, const Point3 & pnt1)
 {
-	return Point3((pnt0.getX() < pnt1.getX()) ? pnt0.getX() : pnt1.getX(),
-				  (pnt0.getY() < pnt1.getY()) ? pnt0.getY() : pnt1.getY(),
-				  (pnt0.getZ() < pnt1.getZ()) ? pnt0.getZ() : pnt1.getZ());
+	Point3 res;
+	vfpuMin4v(&pnt0.mX, &pnt1.mX, &res.mX);
+	return res;
 }
 
 inline float minElem(const Point3 & pnt)
 {
-	float result;
-	result = (pnt.getX() < pnt.getY()) ? pnt.getX() : pnt.getY();
-	result = (pnt.getZ() < result)     ? pnt.getZ() : result;
-	return result;
+	return vfpuMin4f(&pnt.mX);
 }
 
 inline float sum(const Point3 & pnt)
 {
-	float result;
-	result = (pnt.getX() + pnt.getY());
-	result = (result + pnt.getZ());
-	return result;
+	return vfpuSum4(&pnt.mX);
 }
 
 inline const Point3 scale(const Point3 & pnt, float scaleVal)
 {
-	return mulPerElem(pnt, Point3(scaleVal));
+	Point3 res;
+	vfpuScale4(&pnt.mX, &res.mX, scaleVal);
+	return res;
 }
 
 inline const Point3 scale(const Point3 & pnt, const Vector3 & scaleVec)
 {
-	return mulPerElem(pnt, Point3(scaleVec));
+	Point3 res;
+	vfpuMul4(&pnt.mX, &scaleVec.mX, &res.mX);
+	return res;
 }
 
 inline float projection(const Point3 & pnt, const Vector3 & unitVec)
 {
-	float result;
-	result = (pnt.getX() * unitVec.getX());
-	result = (result + (pnt.getY() * unitVec.getY()));
-	result = (result + (pnt.getZ() * unitVec.getZ()));
-	return result;
+	return vfpuProjection4(&pnt.mX, &unitVec.mX);
 }
 
 inline float distSqrFromOrigin(const Point3 & pnt)
 {
-	return lengthSqr(Vector3(pnt));
+	return vfpuLengthSqr4(&pnt.mX);
 }
 
 inline float distFromOrigin(const Point3 & pnt)
 {
-	return length(Vector3(pnt));
+	return vfpuLength4(&pnt.mX);
 }
 
 inline float distSqr(const Point3 & pnt0, const Point3 & pnt1)
 {
-	return lengthSqr(pnt1 - pnt0);
+	Vector3 diff = pnt1 - pnt0;
+	return vfpuLengthSqr4(&diff.mX);
 }
 
 inline float dist(const Point3 & pnt0, const Point3 & pnt1)
 {
-	return length(pnt1 - pnt0);
+	Vector3 diff = pnt1 - pnt0;
+	return vfpuLength4(&diff.mX);
 }
 
 inline const Point3 select(const Point3 & pnt0, const Point3 & pnt1, bool select1)
 {
-	return Point3((select1) ? pnt1.getX() : pnt0.getX(),
-				  (select1) ? pnt1.getY() : pnt0.getY(),
-				  (select1) ? pnt1.getZ() : pnt0.getZ());
+	return select1 ? pnt1 : pnt0;
 }
 
 #ifdef VECTORMATH_DEBUG

@@ -16,7 +16,7 @@ AskIfWantWindows() {
 
 if make -j13 PRX=0; then
 	if AskIfWantWindows; then
-		wine ./tools/emu_win/PPSSPPWindows64.exe -d ./bin/Testbed/EBOOT.PBP > /dev/null 2>&1
+		wine ./emu_win/PPSSPPWindows64.exe -d ./bin/Testbed/EBOOT.PBP
 	else
 		# flatpak run org.ppsspp.PPSSPP -d ./bin/Testbed/EBOOT.PBP > psp.log 2>&1
 		stdbuf -oL -eL flatpak run org.ppsspp.PPSSPP -d ./bin/Testbed/EBOOT.PBP 2>&1 \
