@@ -4,7 +4,8 @@
 
 extern "C"
 {
-	extern void		vfpuCopy4v(const float inVec[4], float ioVec[4]);
+	extern void		vfpuCopy4(const float inVec[4], float ioVec[4]);
+	
 	extern void		vfpuReplicate4(float inScalar, float ioVec[4]);
 
 	extern void		vfpuAdd4(const float inVecA[4], const float inVecB[4], float ioVec[4]);
@@ -32,4 +33,18 @@ extern "C"
 
 	extern void		vfpuLerp4(const float inVecA[4], const float inVecB[4], float ioVec[4], float inT);
 	extern float	vfpuProjection4(const float inPnt[4], const float inUnitVec[4]);
+
+	extern void		vfpuCopy9(const float inMat[9], float ioMat[9]);
+	extern void		vfpuCopy16(const float inMat[16], float ioMat[16]);
+	extern void		vfpuReplicate9(float inScalar, float ioMat[9]);
+	extern void		vfpuReplicate16(float inScalar, float ioMat[16]);
+	extern void		vfpuTranspose9(const float inMat[9], const float ioMat[9]);
+	extern void		vfpuTranspose16(const float inMat[16], const float ioMat[16]);
+	extern void		vfpuIdentity9(const float ioMat[9]);
+	extern void		vfpuIdentity16(const float ioMat[16]);
+	extern void		vfpuInverse9(const float inMat[9], float ioMat[9]);
+	extern void		vfpuScale9(const float inMat[9], float ioMat[9], float inScalar);
+	extern float	vfpuDeterminant3(const float inMat[9]);
+	extern void		vfpuMulMat3Vec3(const float inMat[9], const float inVec[4], float ioVec[4]);
+	extern void		vfpuMulMat3Mat3(const float inMatA[9], const float inMatB[9], float ioMat[9]);
 }

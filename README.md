@@ -11,7 +11,7 @@ VFPU version of [glampert's modification of Sony's open-sourced header-only vect
 * This modification includes a testbed application to run unit testing (GoogleTest) to verify the output of the VFPU implementation against the Scalar implementation on Emulator PSP or real PSP.
 
 ## Breaking Changes
-* The original library preserved the W component of 3D Vectors. This is no longer preserved. The W component of 3D Vectors is undefined after many operations. DO NOT rely on it!!
+* The original library preserved the W component of 3D Vectors and the 4th column of 3x3 Matrices. This is no longer preserved. The W component of 3D Vectors and 4th column of 3x3 Matrices is undefined after many operations. Do not rely on it!! If you need the W or 4th column then use `Vector4` and `Matrix4`.
 
 ## Non-Breaking Changes
 * All member variables are public now.

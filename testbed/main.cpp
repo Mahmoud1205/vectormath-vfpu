@@ -69,7 +69,7 @@ public:
 	{
 		puts("====== VectorMath VFPU Test ======");
 		puts("Press any button to start testing..\n");
-		waitForBtn();
+		// waitForBtn();
 	};
 
 	void OnTestStart(const testing::TestInfo& inTI) override
@@ -98,6 +98,7 @@ public:
 		{
 			pspDebugScreenSetTextColor(0x00FF00);
 			pspDebugScreenCarriageReturn();
+			// TODO: why are these arguments not used?
 			printf("[ TEST: PASS ]\n", inTI.test_suite_name(), inTI.name());
 		}
 	}
@@ -110,19 +111,19 @@ public:
 		else
 			testColor = 0x0000FF;
 
-		float scalarVfpuRatio = sScalarTime / sVfpuTime;
+		float vfpuScalarRatio = sScalarTime / sVfpuTime;
 
-		if (scalarVfpuRatio > 1.0f)
-			perfRatioColor = 0x00FF00;
+		if (vfpuScalarRatio > 1.0f)
+			perfRatioColor = 0x00FF00; // green
 		else
-			perfRatioColor = 0x0000FF;
+			perfRatioColor = 0x0000FF; // red
 
 		pspDebugScreenSetTextColor(0xFFFFFF);
 		printf("\n=== VectorMath VFPU Test [END] ===\n");
 		pspDebugScreenSetTextColor(testColor);
 		printf("  * %d/%d tests passed.\n", inUT.successful_test_count(), inUT.test_to_run_count());
 		pspDebugScreenSetTextColor(perfRatioColor);
-		printf("  * Scalar:VFPU Performance Ratio: %.3f (%.3fus/%.3fus)\n\n", scalarVfpuRatio, sScalarTime, sVfpuTime);
+		printf("  * VFPU:Scalar Performance Ratio: %.3f (%.3fms/%.3fms)\n\n", vfpuScalarRatio, sVfpuTime / 1000.0f, sScalarTime / 1000.0f);
 		pspDebugScreenSetTextColor(0xFFFFFF);
 	}
 
@@ -160,20 +161,33 @@ int main(int argc, char** argv)
 #include <vfpu/vectormath.hpp>
 using namespace Vectormath;
 
+// TODO: compiler pragma to disable optimization if it negatively effects profiling
 #define VMTEST(inTestName) TEST(VectorMath, inTestName)
 
+// TODO: consider changing the epsilon
 #define EXPECT_FLOAT_EQ(inA, inB) EXPECT_NEAR(inA, inB, 1e-5)
 
-#define EXPECT_VEC3_EQ(inA, inB)				\
-	EXPECT_FLOAT_EQ(inA.getX(), inB.getX());	\
-	EXPECT_FLOAT_EQ(inA.getY(), inB.getY());	\
+#define EXPECT_VEC3_EQ(inA, inB)						\
+	EXPECT_FLOAT_EQ(inA.getX(), inB.getX());			\
+	EXPECT_FLOAT_EQ(inA.getY(), inB.getY());			\
 	EXPECT_FLOAT_EQ(inA.getZ(), inB.getZ());
 
-#define EXPECT_VEC4_EQ(inA, inB)				\
-	EXPECT_FLOAT_EQ(inA.getX(), inB.getX());	\
-	EXPECT_FLOAT_EQ(inA.getY(), inB.getY());	\
-	EXPECT_FLOAT_EQ(inA.getZ(), inB.getZ());	\
+#define EXPECT_VEC4_EQ(inA, inB)						\
+	EXPECT_FLOAT_EQ(inA.getX(), inB.getX());			\
+	EXPECT_FLOAT_EQ(inA.getY(), inB.getY());			\
+	EXPECT_FLOAT_EQ(inA.getZ(), inB.getZ());			\
 	EXPECT_FLOAT_EQ(inA.getW(), inB.getW());
+
+#define EXPECT_MAT3_EQ(inA, inB)						\
+	EXPECT_VEC3_EQ(inA.getCol0(), inB.getCol0());		\
+	EXPECT_VEC3_EQ(inA.getCol1(), inB.getCol1());		\
+	EXPECT_VEC3_EQ(inA.getCol2(), inB.getCol2());
+
+#define EXPECT_MAT4_EQ(inA, inB)						\
+	EXPECT_VEC4_EQ(inA.getCol0(), inB.getCol0());		\
+	EXPECT_VEC4_EQ(inA.getCol1(), inB.getCol1());		\
+	EXPECT_VEC4_EQ(inA.getCol2(), inB.getCol2());		\
+	EXPECT_VEC4_EQ(inA.getCol3(), inB.getCol3());
 
 /**
  * ======================================================================
@@ -201,16 +215,24 @@ using namespace Vectormath;
 // 	EXPECT_VEC3_EQ(sC, vC);
 // }
 
-// TODO: unit tests for Vector4 and Point3
+#define REPEAT_TIMES (10'000)
+
+#pragma region Test Cases
+
+// TODO: do we need to test vec2 and vec4 also or is vec3 enough?
+// vec3 only: it is the most expressive; has dot and cross product
+// vec4 only: can be multiplied with mat4s
+// all vecs: no reason
+// just do both vec3 and vec4; vec2 is useless
 
 VMTEST(VectorAddition)
 {
-	Scalar::Vector3 sA(1.0f, 1.0f, 1.0f);
+	Scalar::Vector3 sA(2.0f, 2.0f, 2.0f);
 	Scalar::Vector3 sB(1.0f, 1.0f, 1.0f);
 	Scalar::Vector3 sC = sA + sB;
 	sC += Scalar::Vector3(2.0f);
 
-	VFPU::Vector3 vA(1.0f, 1.0f, 1.0f);
+	VFPU::Vector3 vA(2.0f, 2.0f, 2.0f);
 	VFPU::Vector3 vB(1.0f, 1.0f, 1.0f);
 	VFPU::Vector3 vC = vA + vB;
 	vC += VFPU::Vector3(2.0f);
@@ -554,84 +576,196 @@ VMTEST(PointScale)
 	EXPECT_VEC3_EQ(sC, vC);
 }
 
+VMTEST(Matrix3Inverse)
+{
+	Scalar::Matrix3 sA = Scalar::Matrix3( // fake rotation mtx
+		Scalar::Vector3(1.0f, 2.0f, 0.0f),
+		Scalar::Vector3(3.0f, 4.0f, 0.0f),
+		Scalar::Vector3(0.0f, 0.0f, 5.0f)
+	);
+	Scalar::Matrix3 sB = Scalar::inverse(sA);
+
+	VFPU::Matrix3 vA = VFPU::Matrix3(
+		VFPU::Vector3(1.0f, 2.0f, 0.0f),
+		VFPU::Vector3(3.0f, 4.0f, 0.0f),
+		VFPU::Vector3(0.0f, 0.0f, 5.0f)
+	);
+	VFPU::Matrix3 vB = VFPU::inverse(vA);
+
+	EXPECT_MAT3_EQ(sB, vB);
+}
+
+VMTEST(Matrix3Scale)
+{
+	Scalar::Matrix3 sA = Scalar::Matrix3(
+		Scalar::Vector3(2.0f, 2.0f, 2.0f),
+		Scalar::Vector3(2.0f, 2.0f, 2.0f),
+		Scalar::Vector3(2.0f, 2.0f, 2.0f)
+	) * 2.0f;
+
+	VFPU::Matrix3 vA = VFPU::Matrix3(
+		VFPU::Vector3(2.0f, 2.0f, 2.0f),
+		VFPU::Vector3(2.0f, 2.0f, 2.0f),
+		VFPU::Vector3(2.0f, 2.0f, 2.0f)
+	) * 2.0f;
+
+	EXPECT_MAT3_EQ(sA, vA);
+}
+
+VMTEST(Matrix3Determinant)
+{
+	float sA = Scalar::determinant(Scalar::Matrix3(
+		Scalar::Vector3(2.0f, 2.0f, 2.0f),
+		Scalar::Vector3(2.0f, 2.0f, 2.0f),
+		Scalar::Vector3(2.0f, 2.0f, 2.0f)
+	));
+
+	float vA = VFPU::determinant(VFPU::Matrix3(
+		VFPU::Vector3(2.0f, 2.0f, 2.0f),
+		VFPU::Vector3(2.0f, 2.0f, 2.0f),
+		VFPU::Vector3(2.0f, 2.0f, 2.0f)
+	));
+
+	EXPECT_FLOAT_EQ(sA, vA);
+}
+
+VMTEST(Matrix3Vector3Multiplication)
+{
+	Scalar::Vector3 sA = Scalar::Matrix3(
+		Scalar::Vector3(2.0f, 2.0f, 2.0f),
+		Scalar::Vector3(2.0f, 2.0f, 2.0f),
+		Scalar::Vector3(2.0f, 2.0f, 2.0f)
+	) * Scalar::Vector3(2.0f, 2.0f, 2.0f);
+
+	VFPU::Vector3 vA = VFPU::Matrix3(
+		VFPU::Vector3(2.0f, 2.0f, 2.0f),
+		VFPU::Vector3(2.0f, 2.0f, 2.0f),
+		VFPU::Vector3(2.0f, 2.0f, 2.0f)
+	) * VFPU::Vector3(2.0f, 2.0f, 2.0f);
+
+	EXPECT_VEC3_EQ(sA, vA);
+}
+
+VMTEST(Matrix3Matrix3Multiplication)
+{
+	Scalar::Matrix3 sA = Scalar::Matrix3(
+		Scalar::Vector3(2.0f, 2.0f, 2.0f),
+		Scalar::Vector3(2.0f, 2.0f, 2.0f),
+		Scalar::Vector3(2.0f, 2.0f, 2.0f)
+	) * Scalar::Matrix3(
+		Scalar::Vector3(2.0f, 2.0f, 2.0f),
+		Scalar::Vector3(2.0f, 2.0f, 2.0f),
+		Scalar::Vector3(2.0f, 2.0f, 2.0f)
+	);
+
+	VFPU::Matrix3 vA = VFPU::Matrix3(
+		VFPU::Vector3(2.0f, 2.0f, 2.0f),
+		VFPU::Vector3(2.0f, 2.0f, 2.0f),
+		VFPU::Vector3(2.0f, 2.0f, 2.0f)
+	) * VFPU::Matrix3(
+		VFPU::Vector3(2.0f, 2.0f, 2.0f),
+		VFPU::Vector3(2.0f, 2.0f, 2.0f),
+		VFPU::Vector3(2.0f, 2.0f, 2.0f)
+	);
+
+	EXPECT_MAT3_EQ(sA, vA);
+}
+#pragma endregion
+
+template<typename V3, typename P3, typename M33, typename M44, typename Q>
+__attribute__((noinline, optimize("O0")))
+float performanceTest()
+{
+	float elapsed;
+
+	// sceKernelDcacheWritebackInvalidateAll();
+	// sceKernelIcacheInvalidateAll();
+
+	u64 start, end;
+	sceRtcGetCurrentTick(&start);
+
+	for (u32 i = 0; i < REPEAT_TIMES; i++)
+	{
+		V3 a(2.0f, 2.0f, 2.0f);
+		V3 b(8.0f, 8.0f, 8.0f);
+
+		V3 add = V3(1.0f, 1.0f, 1.0f) + V3(2.0f, 2.0f, 2.0f);
+		V3 sub = V3(1.0f, 1.0f, 1.0f) - V3(2.0f, 2.0f, 2.0f);
+		V3 mul = mulPerElem(a, a);
+		V3 div = divPerElem(b, a);
+		mul *= 5.0f;
+		mul /= 2.0f;
+
+		V3 _lerp = lerp(0.5f, sub, add);
+		V3 _cross = cross(V3(1.0f, 0.0f, 0.0f), V3(0.0f, 1.0f, 0.0f));
+
+		V3 recip = recipPerElem(V3(5.0f, 5.0f, 5.0f));
+		V3 sqrt = sqrtPerElem(V3(16.0f, 16.0f, 16.0f));
+		V3 rsqrt = rsqrtPerElem(V3(16.0f, 16.0f, 16.0f));
+		V3 abs = absPerElem(V3(-359.0f, -2348.0f, -8573.0f));
+		V3 max = maxPerElem(V3(0.0f, 90.0f, 30.0f), V3(1.0f, 89.0f, 31.0f));
+		V3 min = minPerElem(V3(0.0f, 90.0f, 30.0f), V3(1.0f, 89.0f, 31.0f));
+		V3 normalized = normalize(mul);
+
+		float max2 = maxElem(max);
+		float min2 = minElem(min);
+
+		float _sum = sum(add);
+		float _dot = dot(add, sub);
+		float _lengthSqr = lengthSqr(add);
+		float _length = length(add);
+
+		M33 invM33 = inverse(M33(
+			V3(1.0f, 2.0f, 0.0f),
+			V3(3.0f, 4.0f, 0.0f),
+			V3(0.0f, 0.0f, 5.0f)));
+
+		M33 sclM33 = M33(
+			V3(2.0f, 2.0f, 2.0f),
+			V3(2.0f, 2.0f, 2.0f),
+			V3(2.0f, 2.0f, 2.0f)
+		) * 2.0f;
+
+		float detM33 = determinant(M33(
+			V3(2.0f, 2.0f, 2.0f),
+			V3(2.0f, 2.0f, 2.0f),
+			V3(2.0f, 2.0f, 2.0f)
+		));
+
+		V3 M33xV3 = M33(
+			V3(2.0f, 2.0f, 2.0f),
+			V3(2.0f, 2.0f, 2.0f),
+			V3(2.0f, 2.0f, 2.0f)
+		) * V3(2.0f, 2.0f, 2.0f);
+
+		M33 sA = M33(
+			V3(2.0f, 2.0f, 2.0f),
+			V3(2.0f, 2.0f, 2.0f),
+			V3(2.0f, 2.0f, 2.0f)
+		) * M33(
+			V3(2.0f, 2.0f, 2.0f),
+			V3(2.0f, 2.0f, 2.0f),
+			V3(2.0f, 2.0f, 2.0f)
+		);
+	}
+
+	sceRtcGetCurrentTick(&end);
+	elapsed = (float)(end - start);
+
+	return elapsed;
+}
+
 VMTEST(Performance)
 {
-	// in microseconds
-	float elapsedScalar, elapsedVFPU;
+	float elapsedScalar = performanceTest<
+		Scalar::Vector3, Scalar::Point3,
+		Scalar::Matrix3, Scalar::Matrix4,
+		Scalar::Quat>();
 
-	{
-		using namespace Scalar;
-		using V3 = Vector3;
-
-		u64 start, end;
-		sceRtcGetCurrentTick(&start);
-
-		V3 add = V3(1.0f, 1.0f, 1.0f) + V3(2.0f, 2.0f, 2.0f);
-		V3 sub = V3(1.0f, 1.0f, 1.0f) - V3(2.0f, 2.0f, 2.0f);
-		V3 mul = mulPerElem(V3(2.0f, 2.0f, 2.0f), V3(2.0f, 2.0f, 2.0f));
-		V3 div = divPerElem(V3(8.0f, 8.0f, 8.0f), V3(2.0f, 2.0f, 2.0f));
-		mul *= 5.0f;
-		mul /= 2.0f;
-
-		V3 _lerp = lerp(0.5f, sub, add);
-		V3 _cross = cross(V3(1.0f, 0.0f, 0.0f), V3(0.0f, 1.0f, 0.0f));
-
-		V3 recip = recipPerElem(V3(5.0f, 5.0f, 5.0f));
-		V3 sqrt = sqrtPerElem(V3(16.0f, 16.0f, 16.0f));
-		V3 rsqrt = rsqrtPerElem(V3(16.0f, 16.0f, 16.0f));
-		V3 abs = absPerElem(V3(-359.0f, -2348.0f, -8573.0f));
-		V3 max = maxPerElem(V3(0.0f, 90.0f, 30.0f), V3(1.0f, 89.0f, 31.0f));
-		V3 min = minPerElem(V3(0.0f, 90.0f, 30.0f), V3(1.0f, 89.0f, 31.0f));
-		V3 normalized = normalize(mul);
-
-		float max2 = maxElem(max);
-		float min2 = minElem(min);
-
-		float _sum = sum(add);
-		float _dot = dot(add, sub);
-		float _lengthSqr = lengthSqr(add);
-		float _length = length(add);
-
-		sceRtcGetCurrentTick(&end);
-		elapsedScalar = (float)(end - start);
-	}
-
-	{
-		using namespace VFPU;
-		using V3 = Vector3;
-
-		u64 start, end;
-		sceRtcGetCurrentTick(&start);
-
-		V3 add = V3(1.0f, 1.0f, 1.0f) + V3(2.0f, 2.0f, 2.0f);
-		V3 sub = V3(1.0f, 1.0f, 1.0f) - V3(2.0f, 2.0f, 2.0f);
-		V3 mul = mulPerElem(V3(2.0f, 2.0f, 2.0f), V3(2.0f, 2.0f, 2.0f));
-		V3 div = divPerElem(V3(8.0f, 8.0f, 8.0f), V3(2.0f, 2.0f, 2.0f));
-		mul *= 5.0f;
-		mul /= 2.0f;
-
-		V3 _lerp = lerp(0.5f, sub, add);
-		V3 _cross = cross(V3(1.0f, 0.0f, 0.0f), V3(0.0f, 1.0f, 0.0f));
-
-		V3 recip = recipPerElem(V3(5.0f, 5.0f, 5.0f));
-		V3 sqrt = sqrtPerElem(V3(16.0f, 16.0f, 16.0f));
-		V3 rsqrt = rsqrtPerElem(V3(16.0f, 16.0f, 16.0f));
-		V3 abs = absPerElem(V3(-359.0f, -2348.0f, -8573.0f));
-		V3 max = maxPerElem(V3(0.0f, 90.0f, 30.0f), V3(1.0f, 89.0f, 31.0f));
-		V3 min = minPerElem(V3(0.0f, 90.0f, 30.0f), V3(1.0f, 89.0f, 31.0f));
-		V3 normalized = normalize(mul);
-
-		float max2 = maxElem(max);
-		float min2 = minElem(min);
-
-		float _sum = sum(add);
-		float _dot = dot(add, sub);
-		float _lengthSqr = lengthSqr(add);
-		float _length = length(add);
-
-		sceRtcGetCurrentTick(&end);
-		elapsedVFPU = (float)(end - start);
-	}
+	float elapsedVFPU = performanceTest<
+		VFPU::Vector3, VFPU::Point3,
+		VFPU::Matrix3, VFPU::Matrix4,
+		VFPU::Quat>();
 
 	PspTestListener::sScalarTime = elapsedScalar;
 	PspTestListener::sVfpuTime = elapsedVFPU;

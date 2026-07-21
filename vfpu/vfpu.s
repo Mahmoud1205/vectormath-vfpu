@@ -1,25 +1,34 @@
 	.set		noreorder
 
 	# TODO: DOCUMENT THIS CODE
+	# TODO: utilize branch delay slots
 
 
-	# void vfpuCopy4v(const float inVec[4], float ioVec[4]);
-	.ent		vfpuCopy4v
-	.global		vfpuCopy4v
-vfpuCopy4v:
+
+	###########################################
+	###########################################
+	#	VECTOR & POINT FUNCTIONS
+	###########################################
+	###########################################
+
+
+	# void vfpuCopy4(const float inVec[4], float ioVec[4]);
+	.ent		vfpuCopy4
+	.global		vfpuCopy4
+vfpuCopy4:
 	lv.q		C000, 0($a0)
 	sv.q		C000, 0($a1)
 	jr			$ra
 	nop
-	.end		vfpuCopy4v
+	.end		vfpuCopy4
 
 
 	# void vfpuReplicate4(float inScalar, float ioVec[4]);
 	.ent		vfpuReplicate4
 	.global		vfpuReplicate4
 vfpuReplicate4:
-	# TODO: maybe vmov.s is faster than mtv. profile this
-	# or vmov.q with swizzle .xxxx prefix
+	# TODO:	maybe vmov.s is faster than mtv. profile this
+	#		or vmov.q with swizzle .xxxx prefix
 	mfc1		$t0, $f12
 	mtv			$t0, S000
 	mtv			$t0, S001
@@ -325,3 +334,252 @@ vfpuProjection4:
 	jr			$ra
 	nop
 	.end		vfpuProjection4
+
+
+
+	###########################################
+	###########################################
+	#	MATRIX FUNCTIONS
+	###########################################
+	###########################################
+
+
+	# void vfpuCopy9(const float inMat[9], float ioMat[9]);
+	.ent		vfpuCopy9
+	.global		vfpuCopy9
+vfpuCopy9:
+	lv.q		C000, 0($a0)
+	lv.q		C010, 16($a0)
+	lv.q		C020, 32($a0)
+	sv.q		C000, 0($a1)
+	sv.q		C010, 16($a1)
+	sv.q		C020, 32($a1)
+	jr			$ra
+	nop
+	.end		vfpuCopy9
+
+
+	# void vfpuCopy16(const float inMat[16], float ioMat[16]);
+	.ent		vfpuCopy16
+	.global		vfpuCopy16
+vfpuCopy16:
+	lv.q		C000, 0($a0)
+	lv.q		C010, 16($a0)
+	lv.q		C020, 32($a0)
+	lv.q		C030, 48($a0)
+	sv.q		C000, 0($a1)
+	sv.q		C010, 16($a1)
+	sv.q		C020, 32($a1)
+	sv.q		C030, 48($a1)
+	jr			$ra
+	nop
+	.end		vfpuCopy16
+
+
+	# TODO:	optimize this for matrices or change the code that uses
+	#		it to use multiple vfpuReplicate4
+	# void vfpuReplicate9(float inScalar, float ioMat[9]);
+	.ent		vfpuReplicate9
+	.global		vfpuReplicate9
+vfpuReplicate9:
+	# TODO: maybe vmov.s is faster than mtv. profile this
+	# or vmov.q with swizzle .xxxx prefix
+	mfc1		$t0, $f12
+	mtv			$t0, S000
+	mtv			$t0, S001
+	mtv			$t0, S002
+	vmov.t		C010, C000
+	vmov.t		C020, C000
+	sv.q		C000, 0($a1)
+	sv.q		C010, 16($a1)
+	sv.q		C020, 32($a1)
+	jr			$ra
+	nop
+	.end		vfpuReplicate9
+
+
+	# TODO:	optimize this for matrices or change the code that uses
+	#		it to use multiple vfpuReplicate4
+	# void vfpuReplicate16(float inScalar, float ioVec[4]);
+	.ent		vfpuReplicate16
+	.global		vfpuReplicate16
+vfpuReplicate16:
+	# TODO: maybe vmov.s is faster than mtv. profile this
+	# or vmov.q with swizzle .xxxx prefix
+	mfc1		$t0, $f12
+	mtv			$t0, S000
+	mtv			$t0, S001
+	mtv			$t0, S002
+	vmov.t		C010, C000
+	vmov.t		C020, C000
+	vmov.t		C020, C000
+	sv.q		C000, 0($a1)
+	sv.q		C010, 16($a1)
+	sv.q		C020, 32($a1)
+	sv.q		C030, 48($a1)
+	jr			$ra
+	nop
+	.end		vfpuReplicate16
+
+
+	# NOTE: see vfpuCopy16
+	# void vfpuTranspose9(const float inMat[9], const float ioMat[9]);
+	.ent		vfpuTranspose9
+	.global		vfpuTranspose9
+vfpuTranspose9:
+	lv.q		C000, 0($a0)
+	lv.q		C010, 16($a0)
+	lv.q		C020, 32($a0)
+	sv.q		R000, 0($a1)
+	sv.q		R001, 16($a1)
+	sv.q		R002, 32($a1)
+	jr			$ra
+	nop
+	.end		vfpuTranspose9
+
+
+	# NOTE: see vfpuCopy16
+	# void vfpuTranspose16(const float inMat[16], const float ioMat[16]);
+	.ent		vfpuTranspose16
+	.global		vfpuTranspose16
+vfpuTranspose16:
+	lv.q		C000, 0($a0)
+	lv.q		C010, 16($a0)
+	lv.q		C020, 32($a0)
+	lv.q		C030, 48($a0)
+	sv.q		R000, 0($a1)
+	sv.q		R001, 16($a1)
+	sv.q		R002, 32($a1)
+	sv.q		R003, 48($a1)
+	jr			$ra
+	nop
+	.end		vfpuTranspose16
+
+
+	# void vfpuIdentity9(float ioMat[9]);
+	.ent		vfpuIdentity9
+	.global		vfpuIdentity9
+vfpuIdentity9:
+	vmidt.t		E000
+	sv.q		C000, 0($a0)
+	sv.q		C010, 16($a0)
+	sv.q		C020, 32($a0)
+	jr			$ra
+	nop
+	.end		vfpuIdentity9
+
+
+	# void vfpuIdentity16(float ioMat[16]);
+	.ent		vfpuIdentity16
+	.global		vfpuIdentity16
+vfpuIdentity16:
+	vmidt.q		E000
+	sv.q		C000, 0($a0)
+	sv.q		C010, 16($a0)
+	sv.q		C020, 32($a0)
+	sv.q		C030, 48($a0)
+	jr			$ra
+	nop
+	.end		vfpuIdentity16
+
+
+	# void vfpuInverse9(const float inMat[9], float ioMat[9]);
+	.ent		vfpuInverse9
+	.global		vfpuInverse9
+vfpuInverse9:
+	lv.q		C000, 0($a0)
+	lv.q		C010, 16($a0)
+	lv.q		C020, 32($a0)
+	vcrsp.t		C100, C010, C020
+	vcrsp.t		C110, C020, C000
+	vcrsp.t		C120, C000, C010
+	vdot.t		S300, C020, C120
+	vrcp.s		S300, S300
+	vscl.t		C000, C100, S300
+	vscl.t		C010, C110, S300
+	vscl.t		C020, C120, S300
+	sv.q		R000, 0($a1)
+	sv.q		R001, 16($a1)
+	sv.q		R002, 32($a1)
+	jr			$ra
+	nop
+	.end		vfpuInverse9
+
+
+	# void vfpuScale9(const float inMat[9], float ioMat[9], float inScalar);
+	.ent		vfpuScale9
+	.global		vfpuScale9
+vfpuScale9:
+	mfc1		$t0, $f12
+	mtv			$t0, S100
+	lv.q		C000, 0($a0)
+	lv.q		C010, 16($a0)
+	lv.q		C020, 32($a0)
+	vmscl.t		E000, E000, S100
+	sv.q		C000, 0($a1)
+	sv.q		C010, 16($a1)
+	sv.q		C020, 32($a1)
+	jr			$ra
+	nop
+	.end		vfpuScale9
+
+
+	# float vfpuDeterminant3(const float inMat[9]);
+	.ent		vfpuDeterminant3
+	.global		vfpuDeterminant3
+vfpuDeterminant3:
+	lv.q		C000, 0($a0)
+	lv.q		C010, 16($a0)
+	lv.q		C020, 32($a0)
+	vcrsp.t		C100, C000, C010
+	vdot.t		S200, C020, C100
+	mfv			$t0, S200
+	mtc1		$t0, $f0
+	jr			$ra
+	nop
+	.end		vfpuDeterminant3
+
+
+	# void vfpuMulMat3Vec3(const float inMat[9], const float inVec[4], float ioVec[4]);
+	.ent		vfpuMulMat3Vec3
+	.global		vfpuMulMat3Vec3
+vfpuMulMat3Vec3:
+	lv.q		C000, 0($a0)
+	lv.q		C010, 16($a0)
+	lv.q		C020, 32($a0)
+	lv.q		C030, 0($a1)
+	vtfm4.q		C100, E000, C030
+	sv.q		C100, 0($a2)
+	jr			$ra
+	nop
+	.end		vfpuMulMat3Vec3
+
+
+	# void vfpuMulMat3Mat3(const float inMatA[9], const float inMatB[9], float ioMat[9]);
+	.ent		vfpuMulMat3Mat3
+	.global		vfpuMulMat3Mat3
+vfpuMulMat3Mat3:
+	lv.q		C000, 0($a0)
+	lv.q		C010, 16($a0)
+	lv.q		C020, 32($a0)
+	lv.q		C030, 48($a0)
+	lv.q		C100, 0($a1)
+	lv.q		C110, 16($a1)
+	lv.q		C120, 32($a1)
+	lv.q		C130, 48($a1)
+	vmmul.t		E200, E000, E100
+	sv.q		C200, 0($a2)
+	sv.q		C200, 16($a2)
+	sv.q		C200, 32($a2)
+	sv.q		C200, 48($a2)
+	jr			$ra
+	nop
+	.end		vfpuMulMat3Mat3
+
+	###########################################
+	###########################################
+	#	QUATERNION FUNCTIONS
+	###########################################
+	###########################################
+
+	# coming soon ...

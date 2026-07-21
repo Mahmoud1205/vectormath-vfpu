@@ -47,7 +47,7 @@ static const float VECTORMATH_SLERP_TOL = 0.999f;
 
 inline Vector3::Vector3(const Vector3 & vec)
 {
-	vfpuCopy4v(&vec.mX, &mX);
+	vfpuCopy4(&vec.mX, &mX);
 }
 
 inline Vector3::Vector3(float _x, float _y, float _z)
@@ -59,9 +59,12 @@ inline Vector3::Vector3(float _x, float _y, float _z)
 
 inline Vector3::Vector3(const Point3 & pnt)
 {
-	vfpuCopy4v(&pnt.mX, &mX);
+	vfpuCopy4(&pnt.mX, &mX);
 }
 
+// TODO: for this, and for other similar such as Vec2,4 and Mats,
+// please add an overload for zeroing them; VFPU has zeroing
+// instructions that are likely more efficient than replication
 inline Vector3::Vector3(float scalar)
 {
 	vfpuReplicate4(scalar, &mX);
@@ -111,7 +114,7 @@ inline const Vector3 slerp(float t, const Vector3 & unitVec0, const Vector3 & un
 
 inline Vector3 & Vector3::operator = (const Vector3 & vec)
 {
-	vfpuCopy4v(&vec.mX, &mX);
+	vfpuCopy4(&vec.mX, &mX);
 	return *this;
 }
 
@@ -387,7 +390,7 @@ inline void print(const Vector3 & vec, const char * name)
 
 inline Vector4::Vector4(const Vector4 & vec)
 {
-	vfpuCopy4v(&vec.mX, &mX);
+	vfpuCopy4(&vec.mX, &mX);
 }
 
 inline Vector4::Vector4(float _x, float _y, float _z, float _w)
@@ -400,25 +403,25 @@ inline Vector4::Vector4(float _x, float _y, float _z, float _w)
 
 inline Vector4::Vector4(const Vector3 & xyz, float _w)
 {
-	vfpuCopy4v(&xyz.mX, &mX);
+	vfpuCopy4(&xyz.mX, &mX);
 	mW = _w;
 }
 
 inline Vector4::Vector4(const Vector3 & vec)
 {
-	vfpuCopy4v(&vec.mX, &mX);
+	vfpuCopy4(&vec.mX, &mX);
 	mW = 0.0f;
 }
 
 inline Vector4::Vector4(const Point3 & pnt)
 {
-	vfpuCopy4v(&pnt.mX, &mX);
+	vfpuCopy4(&pnt.mX, &mX);
 	mW = 1.0f;
 }
 
 inline Vector4::Vector4(const Quat & quat)
 {
-	vfpuCopy4v(&quat.mX, &mX);
+	vfpuCopy4(&quat.mX, &mX);
 }
 
 inline Vector4::Vector4(float scalar)
@@ -475,14 +478,14 @@ inline const Vector4 slerp(float t, const Vector4 & unitVec0, const Vector4 & un
 
 inline Vector4 & Vector4::operator = (const Vector4 & vec)
 {
-	vfpuCopy4v(&vec.mX, &mX);
+	vfpuCopy4(&vec.mX, &mX);
 	return *this;
 }
 
 inline Vector4 & Vector4::setXYZ(const Vector3 & vec)
 {
 	float savedW = mW;
-	vfpuCopy4v(&vec.mX, &mX);
+	vfpuCopy4(&vec.mX, &mX);
 	mW = savedW;
 	return *this;
 }
@@ -748,7 +751,7 @@ inline void print(const Vector4 & vec, const char * name)
 
 inline Point3::Point3(const Point3 & pnt)
 {
-	vfpuCopy4v(&pnt.mX, &mX);
+	vfpuCopy4(&pnt.mX, &mX);
 }
 
 inline Point3::Point3(float _x, float _y, float _z)
@@ -760,7 +763,7 @@ inline Point3::Point3(float _x, float _y, float _z)
 
 inline Point3::Point3(const Vector3 & vec)
 {
-	vfpuCopy4v(&vec.mX, &mX);
+	vfpuCopy4(&vec.mX, &mX);
 }
 
 inline Point3::Point3(float scalar)
@@ -777,7 +780,7 @@ inline const Point3 lerp(float t, const Point3 & pnt0, const Point3 & pnt1)
 
 inline Point3 & Point3::operator = (const Point3 & pnt)
 {
-	vfpuCopy4v(&pnt.mX, &mX);
+	vfpuCopy4(&pnt.mX, &mX);
 	return *this;
 }
 
